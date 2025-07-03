@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <title>ระบบแจ้งซ่อม IT&COM</title>
+  <link rel="icon" href="logo.png" type="image/png" />
+  <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #f97316, #6b7280);
+      color: #333;
+      padding-top: 60px; /* เว้นที่หัวเว็บ */
+    }
+    header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 50px;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 20px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      z-index: 1000;
+      animation: slideIn 0.5s ease forwards;
+    }
+    header img {
+      height: 40px;
+      width: auto;
+      animation: rotateLogo 3s linear infinite;
+    }
+    header h1 {
+      font-size: 20px;
+      color: #ea580c;
+      margin: 0;
+      font-weight: bold;
+      user-select: none;
+    }
+    @keyframes rotateLogo {
+      0% { transform: rotate(0deg);}
+      100% { transform: rotate(360deg);}
+    }
+    @keyframes slideIn {
+      from { transform: translateY(-100%);}
+      to { transform: translateY(0);}
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto 30px;
+      background: #fff;
+      padding: 20px 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.12);
+    }
+    h2, h3 {
+      text-align: center;
+      color: #ea580c;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: center;
+      vertical-align: middle;
+    }
+    th {
+      background-color: #f97316;
+      color: white;
+    }
+    tr:nth-child(even) {
+      background-color: #fdf2e9;
+    }
+    tr:nth-child(odd) {
+      background-color: #fff;
+    }
+    button {
+      padding: 5px 10px;
+      margin: 2px;
+      background: linear-gradient(45deg, #f97316, #374151);
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.3s, transform 0.15s;
+      font-size: 13px;
+    }
+    button:hover {
+      background: linear-gradient(45deg, #ea580c, #4b5563);
+      transform: scale(1.05);
+    }
+    .add-btn {
+      display: block;
+      width: fit-content;
+      margin: 0 auto 15px;
+      font-size: 16px;
+    }
+    #charts {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 30px;
+      margin-top: 30px;
+    }
+    .chart-container {
+      max-width: 320px;
+      max-height: 320px;
+      background: #f3f4f6;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.07);
+      padding: 12px;
+      position: relative;
+    }
+    img {
+      max-width: 40px;
+      max-height: 40px;
+      border-radius: 4px;
+      object-fit: cover;
+    }
+    .toggle-buttons {
+      text-align: center;
+      margin-bottom: 15px;
+    }
+    .toggle-buttons button {
+      margin: 0 5px 10px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <img src="logo.png" alt="โลโก้ระบบแจ้งซ่อม IT&COM" />
+  <h1>ระบบแจ้งซ่อม IT&COM</h1>
+</header>
+
+<div class="container">
+  <h2>ระบบแจ้งซ่อม IT (สลับกราฟ + เปอร์เซ็นต์)</h2>
+  <button class="add-btn" onclick="location.href='edit.html'">+ เพิ่มการแจ้งซ่อม</button>
+
+  <h3>รายการแจ้งซ่อมล่าสุด (สูงสุด 50 รายการ)</h3>
+  <table id="dataTable">
+    <thead>
+      <tr>
+        <th>วันที่แจ้ง</th>
+        <th>ชื่อ</th>
+        <th>แผนก</th>
+        <th>ห้อง</th>
+        <th>หัวข้อ</th>
+        <th>ประเภท</th>
+        <th>เร่งด่วน</th>
+        <th>ภาพ</th>
+        <th>จัดการ</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <h3>กราฟสรุปข้อมูล</h3>
+
+  <div class="toggle-buttons">
+    <button onclick="setChartType('doughnut')">กราฟวงกลม</button>
+    <button onclick="setChartType('bar')">กราฟแท่ง</button>
+  </div>
+
+  <div id="charts">
+    <div class="chart-container">
+      <canvas id="chartDepartment"></canvas>
+    </div>
+    <div class="chart-container">
+      <canvas id="chartLocation"></canvas>
+    </div>
+    <div class="chart-container">
+      <canvas id="chartProblemType"></canvas>
+    </div>
+  </div>
+</div>
+
+<script>
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwj9HnItF8jDd4fuW_WIkO_5rIeqpEVueggTMqoGOskNkKv8rBCKPRI13WiWN7wAnEA/exec';
+
+  let currentChartType = 'doughnut';
+  let charts = {};
+
+  async function fetchData() {
+    try {
+      const res = await fetch(SCRIPT_URL);
+      const json = await res.json();
+      if (json.status !== 'success') throw new Error('โหลดข้อมูลไม่สำเร็จ');
+
+      let data = json.data || [];
+      if(data.length > 50) data = data.slice(data.length - 50);
+
+      renderTable(data);
+      loadCharts(data);
+
+    } catch (err) {
+      alert('ผิดพลาด: ' + err.message);
+    }
+  }
+
+  function renderTable(data) {
+    const tbody = document.querySelector('#dataTable tbody');
+    tbody.innerHTML = '';
+
+    data.forEach((item, i) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${item.reportDate || '-'}</td>
+        <td>${item.fullname || '-'}</td>
+        <td>${item.department || '-'}</td>
+        <td>${item.location || '-'}</td>
+        <td>${item.problemTitle || '-'}</td>
+        <td>${item.problemType || '-'}</td>
+        <td>${item.urgency || '-'}</td>
+        <td>${item.imageUrl ? `<img loading="lazy" src="${item.imageUrl}" alt="ภาพประกอบ" />` : '-'}</td>
+        <td>
+          <button onclick="editRow(${i + 2})">แก้ไข</button>
+          <button onclick="deleteRow(${i + 2})">ลบ</button>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function editRow(rowId) {
+    location.href = `edit.html?rowId=${rowId}`;
+  }
+
+  function deleteRow(rowId) {
+    if(!confirm('ยืนยันลบข้อมูล?')) return;
+    fetch(`${SCRIPT_URL}?delete=${rowId}`)
+      .then(res => res.json())
+      .then(json => {
+        if(json.status === 'success') {
+          alert('ลบข้อมูลเรียบร้อย');
+          fetchData();
+        } else {
+          alert('ลบข้อมูลไม่สำเร็จ: ' + json.message);
+        }
+      })
+      .catch(err => alert('ผิดพลาด: ' + err.message));
+  }
+
+  function loadCharts(data) {
+    const dept = countBy(data, 'department');
+    const room = countBy(data, 'location');
+    const type = countBy(data, 'problemType');
+
+    createOrUpdateChart('chartDepartment', 'แผนก', dept);
+    createOrUpdateChart('chartLocation', 'สถานที่/ห้อง', room);
+    createOrUpdateChart('chartProblemType', 'ประเภทปัญหา', type);
+  }
+
+  function countBy(arr, key) {
+    return arr.reduce((acc, item) => {
+      const val = item[key] || 'ไม่ระบุ';
+      acc[val] = (acc[val] || 0) + 1;
+      return acc;
+    }, {});
+  }
+
+  function createOrUpdateChart(id, label, data) {
+    const ctx = document.getElementById(id).getContext('2d');
+
+    const total = Object.values(data).reduce((a,b) => a+b, 0);
+    const labels = Object.keys(data);
+    const counts = Object.values(data);
+    const percentages = counts.map(c => ((c/total)*100).toFixed(1));
+
+    if(charts[id]) charts[id].destroy();
+
+    charts[id] = new Chart(ctx, {
+      type: currentChartType,
+      data: {
+        labels,
+        datasets: [{
+          label: label,
+          data: counts,
+          backgroundColor: generateColors(labels.length),
+          borderColor: '#fff',
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              generateLabels: function(chart) {
+                const dataset = chart.data.datasets[0];
+                return chart.data.labels.map(function(label, i) {
+                  return {
+                    text: label + ' : ' + dataset.data[i] + ' (' + percentages[i] + '%)',
+                    fillStyle: dataset.backgroundColor[i],
+                    strokeStyle: '#fff',
+                    lineWidth: 2,
+                    hidden: false,
+                    index: i
+                  };
+                });
+              }
+            }
+          },
+          title: {
+            display: true,
+            text: 'สรุปตาม ' + label,
+            color: '#ea580c',
+            font: { size: 18, weight: 'bold' }
+          },
+          tooltip: {
+            callbacks: {
+              label: context => {
+                let count = context.parsed;
+                let label = context.label;
+                let pct = ((count/total)*100).toFixed(1);
+                return `${label}: ${count} (${pct}%)`;
+              }
+            }
+          }
+        },
+        animation: {
+          duration: 600
+        },
+        scales: currentChartType === 'bar' ? {
+          y: {
+            beginAtZero: true,
+            ticks: { precision:0 }
+          }
+        } : {}
+      }
+    });
+  }
+
+  function generateColors(count) {
+    const palette = [
+      '#f97316', '#fb923c', '#f59e0b', '#84cc16', '#22c55e',
+      '#0ea5e9', '#6366f1', '#8b5cf6', '#ec4899', '#ef4444'
+    ];
+    const result = [];
+    for (let i = 0; i < count; i++) {
+      result.push(palette[i % palette.length]);
+    }
+    return result;
+  }
+
+  function setChartType(type) {
+    if (type === currentChartType) return;
+    currentChartType = type;
+    fetchData();
+  }
+
+  fetchData();
+</script>
+
+</body>
+</html>
+ 
